@@ -16,6 +16,19 @@
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT" />
 </p>
 
+## Workflow n8n para Importar
+
+> O arquivo principal do workflow n8n esta aqui:
+>
+> [`workflows/telegram-meeting-intelligence-agent.json`](workflows/telegram-meeting-intelligence-agent.json)
+
+Use esse JSON no n8n em **Workflows > Import from File**. Depois de importar, abra os nodes com credenciais e selecione manualmente suas credenciais do Telegram e da OpenAI.
+
+| Arquivo | Uso |
+|---|---|
+| [`workflows/telegram-meeting-intelligence-agent.json`](workflows/telegram-meeting-intelligence-agent.json) | Workflow principal para importar no n8n. |
+| [`workflows/telegram-meeting-reminder-engine.json`](workflows/telegram-meeting-reminder-engine.json) | Workflow complementar para lembretes futuros. |
+
 ## 🎯 Problema que Resolve
 
 Reunioes geram decisoes, tarefas e pendencias que se perdem rapidamente em mensagens soltas. Este projeto cria um fluxo simples para enviar notas pelo Telegram e receber uma analise estruturada pronta para acompanhamento.
@@ -121,7 +134,7 @@ O workflow usa HTTP Request com `predefinedCredentialType` para manter a chave f
 1. Abra o n8n.
 2. Acesse **Workflows**.
 3. Clique em **Import from File**.
-4. Importe `workflows/telegram-meeting-intelligence-agent.json`.
+4. Importe [`workflows/telegram-meeting-intelligence-agent.json`](workflows/telegram-meeting-intelligence-agent.json).
 5. Abra cada node com credencial e selecione a credencial correta:
    - `01 - Telegram Trigger`
    - `06 - AI Meeting Analyzer`
