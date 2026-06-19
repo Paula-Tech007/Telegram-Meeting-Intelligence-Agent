@@ -1,0 +1,45 @@
+{
+  "meeting_summary": "A reuniao definiu a primeira versao de uma automacao para analisar reunioes enviadas pelo Telegram usando n8n e OpenAI. O grupo decidiu manter PostgreSQL como evolucao futura, enquanto a versao inicial entrega analise estruturada e resposta formatada para Telegram.",
+  "decisions": [
+    "A primeira versao sera integrada ao Telegram e ao n8n.",
+    "O schema PostgreSQL ficara preparado, mas o banco nao sera obrigatorio na versao inicial.",
+    "A resposta ao usuario deve ser objetiva e formatada para leitura rapida."
+  ],
+  "action_items": [
+    {
+      "task": "Criar o workflow principal no n8n.",
+      "owner": "Lider Tecnico",
+      "deadline": "sexta-feira",
+      "priority": "high",
+      "status": "open"
+    },
+    {
+      "task": "Preparar exemplos e documentacao inicial.",
+      "owner": "Analista de Automacao",
+      "deadline": "proxima reuniao",
+      "priority": "medium",
+      "status": "open"
+    },
+    {
+      "task": "Validar o formato da resposta antes da publicacao.",
+      "owner": "Time de Produto",
+      "deadline": "",
+      "priority": "medium",
+      "status": "open"
+    }
+  ],
+  "pending_items": [
+    "Definir se o historico sera armazenado em PostgreSQL ou em Data Tables do n8n.",
+    "Validar politicas de retencao de dados."
+  ],
+  "risks": [
+    "Mensagens muito curtas podem gerar analises incompletas.",
+    "Audio ainda depende de uma etapa de transcricao."
+  ],
+  "next_steps": [
+    "Importar o workflow no n8n.",
+    "Configurar as credenciais do Telegram e da OpenAI.",
+    "Executar teste com uma reuniao ficticia."
+  ],
+  "ai_observations": "A analise depende da qualidade do texto enviado. Prazos relativos devem ser confirmados antes de registrar compromissos formais."
+}

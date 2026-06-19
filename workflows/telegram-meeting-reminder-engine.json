@@ -1,0 +1,138 @@
+{
+  "name": "Telegram Meeting Reminder Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "### Reminder Engine\nWorkflow complementar para evolucao futura. Envia lembretes de pendencias quando houver persistencia configurada.",
+        "height": 220,
+        "width": 420,
+        "color": 5
+      },
+      "id": "1da5e6a6-1597-49f8-8a8f-3ee6a873a001",
+      "name": "Sticky - Reminder Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -500,
+        -180
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "5b4228a9-d372-4df7-9d5d-475edb693ed9",
+      "name": "01 - Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "hour": 9,
+              "minute": 0
+            }
+          ]
+        }
+      },
+      "id": "6074fe93-179e-4698-b5a1-66f62a3f96d6",
+      "name": "02 - Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const chatId=(typeof $vars!=='undefined'&&$vars.TELEGRAM_CHAT_ID)?$vars.TELEGRAM_CHAT_ID:'your_chat_id_here';const pendingTasks=[{owner:'Responsavel A',task:'Revisar pendencias da ultima reuniao',deadline:'hoje',priority:'medium'},{owner:'Responsavel B',task:'Confirmar proximos passos com o time',deadline:'esta semana',priority:'low'}];const lines=pendingTasks.map((task,index)=>`${index+1}. <b>Responsavel:</b> ${task.owner}\\n   <b>Tarefa:</b> ${task.task}\\n   <b>Prazo:</b> ${task.deadline}\\n   <b>Prioridade:</b> ${task.priority}`).join('\\n\\n');const html=['<b>⏰ Lembrete de Pendencias</b>','','Este workflow e um motor preparado para a versao com persistencia.','Substitua os itens de exemplo por uma consulta ao PostgreSQL ou Data Tables.','','<b>Tarefas pendentes:</b>',lines,'','<b>Roadmap tecnico:</b> conectar consulta de tarefas abertas e filtrar por responsavel/chat autorizado.'].join('\\n');return[{json:{chatId,telegram_response_html:html,pendingTasks}}];"
+      },
+      "id": "7c782af3-d970-42cb-b3d2-8c8a8362b9c3",
+      "name": "03 - Build Reminder Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        210
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('03 - Build Reminder Message').item.json.chatId }}",
+        "text": "={{ $('03 - Build Reminder Message').item.json.telegram_response_html }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "201a1d7f-3f14-4744-bc50-dc7454c006e0",
+      "name": "04 - Send Telegram Reminder",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        210
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Telegram Bot credential placeholder"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "01 - Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "03 - Build Reminder Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "03 - Build Reminder Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - Build Reminder Message": {
+      "main": [
+        [
+          {
+            "node": "04 - Send Telegram Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

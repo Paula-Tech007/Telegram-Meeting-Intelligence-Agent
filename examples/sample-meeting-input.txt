@@ -1,0 +1,26 @@
+Reuniao de alinhamento do projeto Meeting Intelligence.
+
+Contexto: o time precisa automatizar o acompanhamento de decisoes e tarefas depois das reunioes.
+
+Decisoes:
+- A primeira versao sera integrada ao Telegram e ao n8n.
+- O banco PostgreSQL ficara preparado no schema, mas nao sera obrigatorio na versao inicial.
+- A resposta para o usuario deve ser objetiva e formatada para leitura rapida.
+
+Acoes:
+- Responsavel: Lider Tecnico. Criar o workflow principal no n8n ate sexta-feira.
+- Responsavel: Analista de Automacao. Preparar os exemplos e a documentacao inicial ate a proxima reuniao.
+- Responsavel: Time de Produto. Validar o formato da resposta antes da publicacao.
+
+Pendencias:
+- Definir se o historico sera armazenado em PostgreSQL ou em Data Tables do n8n.
+- Validar politicas de retencao de dados.
+
+Riscos:
+- Mensagens muito curtas podem gerar analises incompletas.
+- Audio ainda depende de uma etapa de transcricao.
+
+Proximos passos:
+- Importar o workflow no n8n.
+- Configurar as credenciais do Telegram e da OpenAI.
+- Executar teste com uma reuniao ficticia.

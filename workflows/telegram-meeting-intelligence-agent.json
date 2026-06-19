@@ -1,0 +1,642 @@
+{
+  "name": "Telegram Meeting Intelligence Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "### Entrada Telegram\nRecebe mensagens do bot e normaliza texto, comandos e metadados de audio sem expor credenciais.",
+        "height": 220,
+        "width": 340,
+        "color": 4
+      },
+      "id": "f1fba6b1-6f3a-4c93-9a21-d5d73640e601",
+      "name": "Sticky - Entrada",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -680,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Roteamento\nSepara comandos, texto de reuniao, audio preparado para transcricao e conteudo invalido.",
+        "height": 260,
+        "width": 380,
+        "color": 5
+      },
+      "id": "86f9d9e5-c975-4cc7-b853-8248a50838e8",
+      "name": "Sticky - Roteamento",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Analise IA\nEnvia apenas texto validado para a OpenAI usando credencial nativa do n8n e espera JSON estruturado.",
+        "height": 260,
+        "width": 420,
+        "color": 3
+      },
+      "id": "199d7c93-ad12-4fa8-a6f7-4c6df739212e",
+      "name": "Sticky - IA",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        300,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Respostas e Erros\nFormata mensagens em HTML para Telegram e retorna erro amigavel quando servicos externos falham.",
+        "height": 320,
+        "width": 420,
+        "color": 7
+      },
+      "id": "9db78d96-5d97-49f1-bd5e-4063e2396bc9",
+      "name": "Sticky - Resposta",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        820,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "0f1f95c7-f419-4fb4-9f01-c024cd8fcb92",
+      "name": "01 - Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -600,
+        80
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Telegram Bot credential placeholder"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items=$input.all();return items.map((item)=>{const update=item.json||{};const message=update.message||update.edited_message||update.channel_post||{};const chat=message.chat||{};const from=message.from||{};const text=String(message.text||message.caption||'').trim();const voice=message.voice||null;const audio=message.audio||null;const document=message.document||null;const firstToken=text.startsWith('/')?text.split(/\\s+/)[0].toLowerCase():null;let messageType='invalid';if(firstToken){messageType='command';}else if(text.length>0){messageType='text';}else if(voice||audio){messageType='audio';}else if(document){messageType='unsupported_file';}const file=voice||audio||document||{};return{json:{receivedAt:new Date().toISOString(),updateId:update.update_id||null,chatId:chat.id||null,chatType:chat.type||null,messageId:message.message_id||null,user:{id:from.id||null,username:from.username||null,firstName:from.first_name||null},rawText:text,command:firstToken,messageType,route:messageType,audio:(voice||audio)?{fileId:file.file_id||null,fileUniqueId:file.file_unique_id||null,duration:file.duration||null,mimeType:file.mime_type||null,transcriptionStatus:'pending_external_transcription'}:null}};});"
+      },
+      "id": "66518749-42df-4fe8-a33b-c8ffc4dcac54",
+      "name": "02 - Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const supportedCommands=['/start','/nova_reuniao','/pendencias','/minhas_tarefas','/ajuda'];return $input.all().map((item)=>{const data={...item.json};let valid=true;let message='Conteudo aceito.';if(!data.chatId){valid=false;data.route='invalid';message='Nao foi possivel identificar o chat de origem.';}else if(data.messageType==='command'&&!supportedCommands.includes(data.command)){valid=false;data.route='invalid';message='Comando nao reconhecido. Envie /ajuda para ver as opcoes disponiveis.';}else if(data.messageType==='text'&&data.rawText.length<40){valid=false;data.route='invalid';message='Envie uma descricao de reuniao com mais contexto: decisoes, tarefas, responsaveis ou pendencias.';}else if(data.messageType==='unsupported_file'){valid=false;data.route='invalid';message='Arquivo recebido, mas esta versao aceita texto e prepara audio para transcricao.';}else if(data.messageType==='invalid'){valid=false;data.route='invalid';message='Nao encontrei texto ou audio valido para analisar.';}data.validation={valid,message,minTextLength:40};return{json:data};});"
+      },
+      "id": "657af22f-c410-4b53-b933-09725bef696c",
+      "name": "03 - Validate Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('03 - Validate Message').item.json.route }}",
+                    "rightValue": "command",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Command"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('03 - Validate Message').item.json.route }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('03 - Validate Message').item.json.route }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Invalid"
+        }
+      },
+      "id": "5110d97c-c99e-4d4d-8c39-99f8c2eb2975",
+      "name": "04 - Route Message Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        80,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$input.first().json;const help='<b>🤖 Telegram Meeting Intelligence Agent</b>\\n\\nEnvie as notas de uma reuniao em texto e eu retorno resumo executivo, decisoes, tarefas, pendencias, riscos e proximos passos.\\n\\n<b>Comandos:</b>\\n/start - Iniciar conversa\\n/nova_reuniao - Ver como enviar uma reuniao\\n/pendencias - Roadmap de consulta de pendencias\\n/minhas_tarefas - Roadmap de consulta de tarefas\\n/ajuda - Ajuda rapida';const responses={'/start':help,'/ajuda':help,'/nova_reuniao':'<b>📝 Nova reuniao</b>\\n\\nEnvie um texto com contexto, decisoes, tarefas, responsaveis, prazos e pendencias.\\n\\nExemplo: Foi decidido que a entrega sera feita no n8n. O Lider Tecnico ficara responsavel pelo workflow ate sexta-feira. Falta validar a politica de retencao.','/pendencias':'<b>📌 Pendencias</b>\\n\\nA consulta de pendencias ficara disponivel quando a camada de persistencia for ativada. Veja o schema em <code>database/schema.sql</code>.','/minhas_tarefas':'<b>✅ Minhas tarefas</b>\\n\\nA consulta de tarefas por responsavel esta planejada para a versao com banco de dados ou Data Tables do n8n.'};return[{json:{chatId:item.chatId,telegram_response_html:responses[item.command]||help,source:'command'}}];"
+      },
+      "id": "16322170-0fc8-494e-9c74-d99af11d4b53",
+      "name": "05C - Build Command Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        330,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('05C - Build Command Response').item.json.chatId }}",
+        "text": "={{ $('05C - Build Command Response').item.json.telegram_response_html }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "e8d8a239-73fe-4545-bdc9-d3272cd1f3b9",
+      "name": "06C - Send Command Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        590,
+        -120
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Telegram Bot credential placeholder"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$input.first().json;const schema={type:'object',properties:{meeting_summary:{type:'string'},decisions:{type:'array',items:{type:'string'}},action_items:{type:'array',items:{type:'object',properties:{task:{type:'string'},owner:{type:'string'},deadline:{type:'string'},priority:{type:'string',enum:['low','medium','high','']},status:{type:'string'}},required:['task','owner','deadline','priority','status']}},pending_items:{type:'array',items:{type:'string'}},risks:{type:'array',items:{type:'string'}},next_steps:{type:'array',items:{type:'string'}},ai_observations:{type:'string'}},required:['meeting_summary','decisions','action_items','pending_items','risks','next_steps','ai_observations']};const systemPrompt=['You are an executive assistant specialized in meeting intelligence.','Extract summary, decisions, action items, owners, deadlines, pending items, risks and next steps.','Return only valid JSON. Do not wrap the answer in Markdown. Do not include prose before or after the JSON.','Do not invent owners or deadlines. Use empty strings when unknown.','JSON schema: '+JSON.stringify(schema)].join('\\n');const userPrompt='Meeting content received from Telegram:\\n\\n'+item.rawText;return[{json:{...item,openaiRequest:{model:'gpt-4o-mini',temperature:0.2,response_format:{type:'json_object'},messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}]}}}];"
+      },
+      "id": "f6812e5b-10cb-4cff-bf3d-6858af5aa6c3",
+      "name": "05 - Build AI Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        330,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('05 - Build AI Request').item.json.openaiRequest }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "7eb9f47a-2b20-4d64-98b4-678aa9447152",
+      "name": "06 - AI Meeting Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        570,
+        80
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "OpenAI API credential placeholder"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const source=$('05 - Build AI Request').first().json;const response=$input.first().json||{};const content=response.choices?.[0]?.message?.content||response.output_text||'';let parsed={};try{parsed=JSON.parse(content);}catch(error){parsed={meeting_summary:'Nao foi possivel interpretar a resposta estruturada da IA.',decisions:[],action_items:[],pending_items:['Revisar manualmente a resposta bruta da IA.'],risks:['A resposta retornada nao estava em JSON valido.'],next_steps:['Reexecutar com mais contexto ou revisar o prompt.'],ai_observations:'Falha ao converter a resposta da IA em JSON.'};}const asArray=(value)=>Array.isArray(value)?value.filter(Boolean):[];const analysis={meeting_summary:String(parsed.meeting_summary||''),decisions:asArray(parsed.decisions),action_items:asArray(parsed.action_items).map((task)=>({task:String(task.task||''),owner:String(task.owner||''),deadline:String(task.deadline||''),priority:String(task.priority||''),status:String(task.status||'open')})),pending_items:asArray(parsed.pending_items),risks:asArray(parsed.risks),next_steps:asArray(parsed.next_steps),ai_observations:String(parsed.ai_observations||'')};return[{json:{...source,analysis,aiUsage:response.usage||null}}];"
+      },
+      "id": "d5f47b02-33eb-470c-8645-f7d14b5ae8ca",
+      "name": "07 - Parse AI Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$input.first().json;const a=item.analysis||{};const safe=(value)=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll(String.fromCharCode(34),'&quot;').replaceAll(String.fromCharCode(39),'&#39;');const list=(values,emptyText)=>{const arr=Array.isArray(values)?values.filter(Boolean):[];return arr.length?arr.map((value,index)=>`${index+1}. ${safe(value)}`).join('\\n'):`1. ${safe(emptyText)}`;};const actions=Array.isArray(a.action_items)&&a.action_items.length?a.action_items.map((task,index)=>`${index+1}. <b>Responsavel:</b> ${safe(task.owner||'Nao informado')}\\n   <b>Tarefa:</b> ${safe(task.task||'Nao informada')}\\n   <b>Prazo:</b> ${safe(task.deadline||'Nao informado')}\\n   <b>Prioridade:</b> ${safe(task.priority||'Nao informada')}`).join('\\n\\n'):'1. Nenhuma acao identificada.';const html=['<b>📌 Resumo da Reuniao</b>','','<b>Resumo executivo:</b>',safe(a.meeting_summary||'Resumo nao identificado.'),'','<b>✅ Decisoes:</b>',list(a.decisions,'Nenhuma decisao identificada.'),'','<b>🧩 Acoes identificadas:</b>',actions,'','<b>⚠️ Pendencias:</b>',list(a.pending_items,'Nenhuma pendencia identificada.'),'','<b>🛡️ Riscos:</b>',list(a.risks,'Nenhum risco identificado.'),'','<b>🚀 Proximos passos:</b>',list(a.next_steps,'Nenhum proximo passo identificado.'),'','<b>🤖 Observacoes da IA:</b>',safe(a.ai_observations||'Analise gerada automaticamente a partir do conteudo enviado.')].join('\\n');return[{json:{chatId:item.chatId,telegram_response_html:html,analysis:a}}];"
+      },
+      "id": "d63e0917-5524-45e5-8534-bbaf6bd27382",
+      "name": "08 - Format Telegram Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('08 - Format Telegram Response').item.json.chatId }}",
+        "text": "={{ $('08 - Format Telegram Response').item.json.telegram_response_html }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "d7ea0c9d-f0a0-40d3-983e-8056cccd51fc",
+      "name": "09 - Send Telegram Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1290,
+        80
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Telegram Bot credential placeholder"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$input.first().json;const payload={source:'telegram',chatId:item.chatId,messageId:item.messageId,fileId:item.audio?.fileId||'',fileUniqueId:item.audio?.fileUniqueId||'',mimeType:item.audio?.mimeType||'audio/ogg',duration:item.audio?.duration||null,status:'ready_for_transcription_node',nextRecommendedNodes:['Telegram Get File','HTTP Request Download File','OpenAI Audio Transcription','AI Meeting Analyzer']};const html='<b>🎙️ Audio recebido</b>\\n\\nEsta versao ja identifica audio e prepara a estrutura para transcricao.\\n\\n<b>Status:</b> payload pronto para modulo de transcricao.\\n<b>Proximo passo tecnico:</b> conectar download do arquivo do Telegram e uma etapa de transcricao antes da analise da reuniao.\\n\\nEnvie as notas em texto para receber a analise completa agora.';return[{json:{chatId:item.chatId,telegram_response_html:html,audio_transcription_payload:payload}}];"
+      },
+      "id": "f7fd705d-620d-46d9-bdb7-80f2f186ac61",
+      "name": "05A - Prepare Audio Transcription Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        330,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('05A - Prepare Audio Transcription Payload').item.json.chatId }}",
+        "text": "={{ $('05A - Prepare Audio Transcription Payload').item.json.telegram_response_html }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "e9316b47-5b73-423c-924b-f8a1c9e1c350",
+      "name": "06A - Send Audio Placeholder Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        590,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Telegram Bot credential placeholder"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$input.first().json;const html='<b>⚠️ Conteudo nao processado</b>\\n\\n'+String(item.validation?.message||'Envie uma mensagem de texto com informacoes da reuniao.').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'\\n\\nUse /ajuda para ver os comandos disponiveis.';return[{json:{chatId:item.chatId,telegram_response_html:html}}];"
+      },
+      "id": "20ef96bc-5a3c-43d4-a04b-7caa78a9fe59",
+      "name": "05I - Invalid Content Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        330,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('05I - Invalid Content Handler').item.json.chatId }}",
+        "text": "={{ $('05I - Invalid Content Handler').item.json.telegram_response_html }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "368a01c0-49e6-4392-8427-0f3dfcda30f6",
+      "name": "06I - Send Invalid Content Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        590,
+        500
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Telegram Bot credential placeholder"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let chatId=null;try{chatId=$('02 - Normalize Input').first().json.chatId;}catch(error){}const err=$input.first().json||{};const message=err.error?.message||err.message||'Erro inesperado ao processar a reuniao.';const safe=String(message).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');const html='<b>⚠️ Nao consegui concluir a analise</b>\\n\\nOcorreu uma falha durante o processamento da IA ou do servico externo.\\n\\n<b>Detalhe tecnico:</b> '+safe+'\\n\\nTente novamente em alguns instantes ou revise as credenciais no n8n.';return[{json:{chatId,telegram_response_html:html,error_source:'ai_or_external_service'}}];"
+      },
+      "id": "4597b4aa-0bdf-440b-a629-04a468bfcc83",
+      "name": "10 - Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('10 - Error Handler').item.json.chatId }}",
+        "text": "={{ $('10 - Error Handler').item.json.telegram_response_html }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "f8bc0bb5-4a1c-4835-a21a-2e584709c3fb",
+      "name": "11 - Send Error Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1060,
+        -120
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID_PLACEHOLDER",
+          "name": "Telegram Bot credential placeholder"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "01 - Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "02 - Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "03 - Validate Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - Validate Message": {
+      "main": [
+        [
+          {
+            "node": "04 - Route Message Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Route Message Type": {
+      "main": [
+        [
+          {
+            "node": "05C - Build Command Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "05 - Build AI Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "05A - Prepare Audio Transcription Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "05I - Invalid Content Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05C - Build Command Response": {
+      "main": [
+        [
+          {
+            "node": "06C - Send Command Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Build AI Request": {
+      "main": [
+        [
+          {
+            "node": "06 - AI Meeting Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - AI Meeting Analyzer": {
+      "main": [
+        [
+          {
+            "node": "07 - Parse AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "10 - Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Parse AI Output": {
+      "main": [
+        [
+          {
+            "node": "08 - Format Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - Format Telegram Response": {
+      "main": [
+        [
+          {
+            "node": "09 - Send Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05A - Prepare Audio Transcription Payload": {
+      "main": [
+        [
+          {
+            "node": "06A - Send Audio Placeholder Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05I - Invalid Content Handler": {
+      "main": [
+        [
+          {
+            "node": "06I - Send Invalid Content Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - Error Handler": {
+      "main": [
+        [
+          {
+            "node": "11 - Send Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
