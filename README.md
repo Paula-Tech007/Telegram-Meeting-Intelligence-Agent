@@ -35,7 +35,7 @@ Reunioes geram decisoes, tarefas e pendencias que se perdem rapidamente em mensa
 
 ## 🧠 O que a Automacao Entrega
 
-| Saida | Descricao |
+| Saida | Descrição |
 |---|---|
 | Resumo executivo | Sintese objetiva da reuniao. |
 | Decisoes | Lista de decisoes identificadas. |
@@ -78,7 +78,7 @@ Telegram Trigger
 | 🟡 | Persistencia em PostgreSQL preparada no schema, ainda nao obrigatoria. |
 | 🟡 | Reminder engine preparado como workflow complementar. |
 
-## 🔄 Demonstracao do Fluxo
+## 🔄 Demonstração do Fluxo
 
 <p align="center">
   <img src="assets/workflow-preview.png" alt="Workflow preview" width="900" />
@@ -224,7 +224,7 @@ Tabelas planejadas:
 - `meeting_decisions`
 - `meeting_risks`
 
-## 🔒 Seguranca
+## 🔒 Segurança
 
 Este repositorio foi preparado para portfolio publico:
 
