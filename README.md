@@ -38,8 +38,8 @@ Reunioes geram decisoes, tarefas e pendencias que se perdem rapidamente em mensa
 | Saida | Descrição |
 |---|---|
 | Resumo executivo | Sintese objetiva da reuniao. |
-| Decisoes | Lista de decisoes identificadas. |
-| Acoes | Tarefas com responsavel, prazo, prioridade e status. |
+| Decisões | Lista de decisoes identificadas. |
+| Ações | Tarefas com responsavel, prazo, prioridade e status. |
 | Pendencias | Pontos em aberto e dependencias. |
 | Riscos | Bloqueios, incertezas e riscos operacionais. |
 | Proximos passos | Lista pratica do que fazer depois. |
