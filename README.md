@@ -319,4 +319,4 @@ MIT. Veja [`LICENSE`](LICENSE).
 
 Projeto criado para fins educacionais, demonstracao tecnica e portfolio profissional em automacao com n8n, Telegram e IA generativa.
 
-Autor: `Paula-Tech007`
+Autor: Paula Sabino
